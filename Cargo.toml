@@ -9,7 +9,12 @@ edition = "2021"
 crossterm = { version = "0.23", features = ["serde"]}
 serde = {version = "1", features = ["derive"]}
 serde_json = "1"
+serde_yaml = "0.8"
 tui = { version = "0.17.0", features= ["crossterm", "serde"]}
 chrono = {version = "0.4", features = ["serde"]}
 thiserror = "1"
 rand = {version = "0.8",  features = ["std"]}
+uuid = { version = "0.8", features = ["v4", "serde"] }
+diesel = { version = "1.4", features = ["sqlite"]}
+dotenvy = "0.15.1"
+lazy_static = "1.4"
