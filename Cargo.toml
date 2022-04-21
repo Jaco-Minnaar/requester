@@ -16,5 +16,6 @@ thiserror = "1"
 rand = {version = "0.8",  features = ["std"]}
 uuid = { version = "0.8", features = ["v4", "serde"] }
 diesel = { version = "1.4", features = ["sqlite"]}
+diesel-derive-enum = { version = "1", features = ["sqlite"] }
 dotenvy = "0.15.1"
 lazy_static = "1.4"
