@@ -5,18 +5,21 @@ use tui::{
     widgets::{Block, BorderType, Borders, List, ListItem, ListState},
 };
 
-use crate::{models::{Api, Resource, Request, NewApi}, services::{api_service, resource_service}};
+use crate::{
+    models::{Api, NewApi, Request, Resource, NewResource},
+    services::{api_service, resource_service},
+};
 
 pub enum LeftType {
     Apis,
     Resources(i32),
-    Requests(i32)
+    Requests(i32),
 }
 
 enum LeftContent {
     Apis(Vec<Api>),
     Resources(Vec<Resource>, i32),
-    Requests(Vec<Request>, i32)
+    Requests(Vec<Request>, i32),
 }
 
 pub enum LeftInputResult {
@@ -27,14 +30,14 @@ pub enum LeftInputResult {
     ShowRequest(i32),
     IntoApi(i32),
     IntoResource(i32),
-    EditRequest(i32)
+    EditRequest(i32),
 }
 
 pub enum SelectedItem {
     None,
     Api(i32),
     Resource(i32),
-    Request(i32)
+    Request(i32),
 }
 
 impl LeftContent {
@@ -42,8 +45,8 @@ impl LeftContent {
         match self {
             LeftContent::Apis(apis) => apis.len(),
             LeftContent::Resources(resources, _) => resources.len(),
-            LeftContent::Requests(requests, _) => requests.len()
-        } 
+            LeftContent::Requests(requests, _) => requests.len(),
+        }
     }
 }
 
@@ -51,18 +54,18 @@ pub struct LeftList {
     content: LeftContent,
     pub list_state: ListState,
     input: Option<String>,
-    selected_item: Option<usize>
+    selected_item: Option<usize>,
 }
 
 impl<'a> LeftList {
     pub fn new() -> Self {
         let apis = api_service::get_all_apis();
-        
+
         Self {
             content: LeftContent::Apis(apis),
             list_state: ListState::default(),
             input: None,
-            selected_item: None
+            selected_item: None,
         }
     }
 
@@ -120,8 +123,12 @@ impl<'a> LeftList {
         if let Some(selected_index) = self.selected_item {
             match &self.content {
                 LeftContent::Apis(apis) => LeftInputResult::ShowApi(apis[selected_index].id),
-                LeftContent::Resources(resources, _) => LeftInputResult::ShowResource(resources[selected_index].id),
-                LeftContent::Requests(requests, _) => LeftInputResult::ShowRequest(requests[selected_index].id)
+                LeftContent::Resources(resources, _) => {
+                    LeftInputResult::ShowResource(resources[selected_index].id)
+                }
+                LeftContent::Requests(requests, _) => {
+                    LeftInputResult::ShowRequest(requests[selected_index].id)
+                }
             }
         } else {
             LeftInputResult::None
@@ -132,27 +139,24 @@ impl<'a> LeftList {
         match key {
             KeyCode::Char(character) => {
                 if let Some(input) = &mut self.input {
-                   input.push(character);
-                   LeftInputResult::None
+                    input.push(character);
+                    LeftInputResult::None
                 } else {
                     match character {
                         'j' => {
                             self.select_down();
                             self.changed_show()
-                        },
+                        }
                         'k' => {
                             self.select_up();
                             self.changed_show()
-                        },
-                        'q' => {
-                            LeftInputResult::Exit
                         }
+                        'q' => LeftInputResult::Exit,
                         'a' => {
                             self.input.replace(String::new());
                             LeftInputResult::None
                         }
-                        _ => LeftInputResult::None
-
+                        _ => LeftInputResult::None,
                     }
                 }
             }
@@ -164,25 +168,33 @@ impl<'a> LeftList {
                             let new_api_list = api_service::get_all_apis();
                             self.content = LeftContent::Apis(new_api_list);
                         }
+                        LeftContent::Resources(_, api_id) => {
+                            resource_service::create_new_resource(NewResource { name: &input, api_id: *api_id });
+                            let new_resource_list = resource_service::get_resources_for_api(*api_id);
+                            self.content = LeftContent::Resources(new_resource_list, *api_id);
+                        }
                         _ => {}
                     }
                     self.input.take();
                     LeftInputResult::None
                 } else {
                     if let Some(selected_index) = self.selected_item {
-                       match &self.content {
-                           LeftContent::Requests(requests, _) => LeftInputResult::EditRequest(requests[selected_index].id),
-                           LeftContent::Apis(apis) => {
-                               let selected_api = &apis[selected_index];
-                               let resources = resource_service::get_resources_for_api(selected_api.id);
-                               let new_content = LeftContent::Resources(resources, selected_api.id);
-                               self.content = new_content;
+                        match &self.content {
+                            LeftContent::Requests(requests, _) => {
+                                LeftInputResult::EditRequest(requests[selected_index].id)
+                            }
+                            LeftContent::Apis(apis) => {
+                                let selected_api = &apis[selected_index];
+                                let resources =
+                                    resource_service::get_resources_for_api(selected_api.id);
+                                let new_content =
+                                    LeftContent::Resources(resources, selected_api.id);
+                                self.content = new_content;
 
-                               LeftInputResult::None
-                           } 
-                           _ => LeftInputResult::None
-
-                       } 
+                                LeftInputResult::None
+                            }
+                            _ => LeftInputResult::None,
+                        }
                     } else {
                         LeftInputResult::None
                     }
@@ -199,12 +211,12 @@ impl<'a> LeftList {
                             let new_content = LeftContent::Apis(apis);
                             self.content = new_content;
                             LeftInputResult::None
-                        } 
-                        _ => LeftInputResult::None
+                        }
+                        _ => LeftInputResult::None,
                     }
                 }
             }
-            _ => LeftInputResult::None 
+            _ => LeftInputResult::None,
         }
     }
 
@@ -221,7 +233,7 @@ impl<'a> LeftList {
             .title(list_title)
             .border_type(BorderType::Plain);
 
-        let mut items: Vec<_> = match &self.content{
+        let mut items: Vec<_> = match &self.content {
             LeftContent::Apis(apis) => {
                 let list = apis.iter().map(|api| {
                     ListItem::new(Spans::from(vec![Span::styled(

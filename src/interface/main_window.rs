@@ -1,7 +1,5 @@
-use super::left_widget::{LeftList, LeftInputResult};
-use super::right_widget::{RightWidget, RightType};
-use crate::models::NewApi;
-use crate::services::api_service;
+use super::left_widget::{LeftInputResult, LeftList};
+use super::right_widget::{RightType, RightWidget};
 use crossterm::event::{self, Event as CEvent, KeyCode};
 use crossterm::terminal::{disable_raw_mode, enable_raw_mode};
 use std::io::{self, Stdout};
@@ -19,7 +17,7 @@ enum Event<I> {
 
 enum Focus {
     Left,
-    Right
+    Right,
 }
 
 pub struct MainWindow {
@@ -27,7 +25,7 @@ pub struct MainWindow {
     terminal: Terminal<CrosstermBackend<Stdout>>,
     left: LeftList,
     right: RightWidget,
-    focus: Focus
+    focus: Focus,
 }
 
 impl<'a> MainWindow {
@@ -45,7 +43,7 @@ impl<'a> MainWindow {
             terminal,
             left: LeftList::new(),
             right,
-            focus: Focus::Left
+            focus: Focus::Left,
         }
     }
 
@@ -102,11 +100,11 @@ impl<'a> MainWindow {
                     .direction(Direction::Horizontal)
                     .constraints([Constraint::Percentage(20), Constraint::Percentage(80)].as_ref())
                     .split(chunks[0]);
+
                 let left_list_state = &self.left.list_state;
                 let left = self.left.render();
-                let right = self.right.render();
+                self.right.draw(rect, main_chunks[1]);
                 rect.render_stateful_widget(left, main_chunks[0], &mut left_list_state.clone());
-                rect.render_widget(right , main_chunks[1]);
             })
             .unwrap();
     }
@@ -116,19 +114,21 @@ impl<'a> MainWindow {
             Focus::Left => {
                 let result = self.left.handle_input(key_code);
                 match result {
-                    LeftInputResult::ShowApi(_) | LeftInputResult::ShowRequest(_) | LeftInputResult::ShowResource(_) => {
+                    LeftInputResult::ShowApi(_)
+                    | LeftInputResult::ShowRequest(_)
+                    | LeftInputResult::ShowResource(_) => {
                         self.set_right(result);
                         false
-                    },
+                    }
                     LeftInputResult::Exit => {
                         disable_raw_mode().unwrap();
                         self.terminal.show_cursor().unwrap();
                         true
-                    },
-                    _ => {false}
+                    }
+                    _ => false,
                 }
             }
-            _ => false
+            _ => false,
         }
     }
 
@@ -137,7 +137,7 @@ impl<'a> MainWindow {
             LeftInputResult::ShowApi(api) => RightType::Api(api),
             //LeftInputResult::ShowResource(resource) => RightType::Resource(resource),
             //LeftInputResult::ShowRequest(request) => RightType::Request(request),
-            _ => RightType::None
+            _ => RightType::None,
         };
 
         self.right.set_type(right_type);

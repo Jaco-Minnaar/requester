@@ -1,10 +1,12 @@
 use std::collections::HashMap;
+use std::io::Stdout;
+use tui::{backend::CrosstermBackend, Frame};
 
 use tui::{
-    layout::Alignment,
+    layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Color, Style},
     text::{Span, Spans},
-    widgets::{Block, BorderType, Borders, Paragraph, Widget},
+    widgets::{ListItem, List, Block, Borders, BorderType}
 };
 
 use crate::{
@@ -14,15 +16,45 @@ use crate::{
 
 pub enum RightType {
     Api(i32),
-    None
-    //Resource(i32),
-    //Request(i32)
+    None, //Resource(i32),
+          //Request(i32)
 }
 
 enum Content {
-    Api(Api, Vec<Resource>),
+    Api(ApiWidget),
     Resource(Resource, Vec<Request>),
     Request(Request, HashMap<String, Header>),
+}
+
+struct ApiWidget {
+    api: Api,
+    resources: Vec<Resource>,
+}
+
+impl ApiWidget {
+    fn draw(&self, frame: &mut Frame<CrosstermBackend<Stdout>>, rect: Rect) {
+        let right_chunk = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints([Constraint::Percentage(100)])
+            .split(rect)[0];
+
+        let list: Vec<_> = self.resources.iter().map(|resource| {
+            ListItem::new(Spans::from(vec![Span::styled(
+                resource.name.clone(),
+                Style::default(),
+            )]))
+        }).collect();
+
+        let right_block = Block::default()
+            .borders(Borders::ALL)
+            .style(Style::default().fg(Color::White))
+            .title("API Details")
+            .border_type(BorderType::Plain);
+
+        let widget = List::new(list).block(right_block);
+
+        frame.render_widget(widget, right_chunk);
+    }
 }
 
 pub struct RightWidget {
@@ -36,9 +68,9 @@ impl RightWidget {
                 let api = api_service::get_api_by_id(api_id).unwrap();
                 let resources = resource_service::get_resources_for_api(api_id);
 
-                Some(Content::Api(api, resources))
+                Some(Content::Api(ApiWidget { api, resources }))
             }
-            RightType::None => None
+            RightType::None => None,
         };
 
         Self { content }
@@ -50,9 +82,9 @@ impl RightWidget {
                 let api = api_service::get_api_by_id(api_id).unwrap();
                 let resources = resource_service::get_resources_for_api(api_id);
 
-                Some(Content::Api(api, resources))
+                Some(Content::Api(ApiWidget { api, resources }))
             }
-            RightType::None => None
+            RightType::None => None,
         };
 
         if let Some(content) = content {
@@ -60,34 +92,14 @@ impl RightWidget {
         } else {
             self.content.take();
         }
-        
     }
 
-    pub fn render(&self) -> impl Widget {
-        let text = if let Some(Content::Api(api, resources)) = &self.content {
-            format!("{} is selected", api.name)
-        } else {
-            "Nothing is selected".to_owned()
-        };
-
-        let right = Paragraph::new(vec![
-            Spans::from(vec![Span::raw("")]),
-            Spans::from(vec![Span::styled(
-                text,
-                Style::default().fg(Color::LightYellow),
-            )]),
-        ])
-        .alignment(Alignment::Center)
-        .block(
-            Block::default()
-                .borders(Borders::ALL)
-                .style(Style::default().fg(Color::White))
-                .title("Nothin")
-                .border_type(BorderType::Plain),
-        );
-
-
-
-        right
+    pub fn draw(&self, frame: &mut Frame<CrosstermBackend<Stdout>>, rect: Rect) {
+        if let Some(content) = &self.content {
+            match content {
+                Content::Api(api_widget) => api_widget.draw(frame, rect),
+                _ => {}
+            }
+        }
     }
 }
