@@ -116,7 +116,8 @@ impl<'a> MainWindow {
                 match result {
                     LeftInputResult::ShowApi(_)
                     | LeftInputResult::ShowRequest(_)
-                    | LeftInputResult::ShowResource(_) => {
+                    | LeftInputResult::ShowResource(_)
+                    | LeftInputResult::ShowNothing => {
                         self.set_right(result);
                         false
                     }
@@ -135,8 +136,9 @@ impl<'a> MainWindow {
     fn set_right(&mut self, input_result: LeftInputResult) {
         let right_type = match input_result {
             LeftInputResult::ShowApi(api) => RightType::Api(api),
-            //LeftInputResult::ShowResource(resource) => RightType::Resource(resource),
-            //LeftInputResult::ShowRequest(request) => RightType::Request(request),
+            LeftInputResult::ShowResource(resource) => RightType::Resource(resource),
+            LeftInputResult::ShowRequest(request) => RightType::Request(request),
+            LeftInputResult::ShowNothing => RightType::None,
             _ => RightType::None,
         };
 

@@ -6,8 +6,9 @@ use tui::{
 };
 
 use crate::{
-    models::{Api, NewApi, Request, Resource, NewResource},
-    services::{api_service, resource_service},
+    models::{Api, NewApi, NewRequest, NewResource, Request, Resource},
+    services::{api_service, request_service, resource_service},
+    types::HttpMethod,
 };
 
 pub enum LeftType {
@@ -28,6 +29,7 @@ pub enum LeftInputResult {
     ShowApi(i32),
     ShowResource(i32),
     ShowRequest(i32),
+    ShowNothing,
     IntoApi(i32),
     IntoResource(i32),
     EditRequest(i32),
@@ -99,10 +101,13 @@ impl<'a> LeftList {
         }
     }
 
-    pub fn select(&mut self, index: usize) {
-        if index < self.content.length() {
-            self.list_state.select(Some(index));
-        }
+    pub fn select(&mut self, index: Option<usize>) {
+        let new_index = match index {
+            Some(i) if i < self.content.length() => index,
+            _ => None,
+        };
+        self.list_state.select(new_index);
+        self.selected_item = index;
     }
 
     pub fn select_first(&mut self) {
@@ -131,7 +136,7 @@ impl<'a> LeftList {
                 }
             }
         } else {
-            LeftInputResult::None
+            LeftInputResult::ShowNothing
         }
     }
 
@@ -169,11 +174,25 @@ impl<'a> LeftList {
                             self.content = LeftContent::Apis(new_api_list);
                         }
                         LeftContent::Resources(_, api_id) => {
-                            resource_service::create_new_resource(NewResource { name: &input, api_id: *api_id });
-                            let new_resource_list = resource_service::get_resources_for_api(*api_id);
+                            resource_service::create_new_resource(NewResource {
+                                name: &input,
+                                api_id: *api_id,
+                            });
+                            let new_resource_list =
+                                resource_service::get_resources_for_api(*api_id);
                             self.content = LeftContent::Resources(new_resource_list, *api_id);
                         }
-                        _ => {}
+                        LeftContent::Requests(_, resource_id) => {
+                            request_service::create_new_request(NewRequest {
+                                route: &input,
+                                method: HttpMethod::Get,
+                                body: None,
+                                resource_id: *resource_id,
+                            });
+                            let new_request_list =
+                                request_service::get_requests_for_resource(*resource_id).unwrap();
+                            self.content = LeftContent::Requests(new_request_list, *resource_id);
+                        }
                     }
                     self.input.take();
                     LeftInputResult::None
@@ -191,9 +210,22 @@ impl<'a> LeftList {
                                     LeftContent::Resources(resources, selected_api.id);
                                 self.content = new_content;
 
-                                LeftInputResult::None
+                                self.select(None);
+                                self.changed_show()
                             }
-                            _ => LeftInputResult::None,
+                            LeftContent::Resources(resources, _) => {
+                                let selected_resource = &resources[selected_index];
+                                let requests = request_service::get_requests_for_resource(
+                                    selected_resource.id,
+                                )
+                                .unwrap();
+                                let new_content =
+                                    LeftContent::Requests(requests, selected_resource.id);
+                                self.content = new_content;
+
+                                self.select(None);
+                                self.changed_show()
+                            }
                         }
                     } else {
                         LeftInputResult::None
@@ -206,11 +238,28 @@ impl<'a> LeftList {
                     LeftInputResult::None
                 } else {
                     match &self.content {
-                        LeftContent::Resources(_, _) => {
+                        LeftContent::Resources(_, api_id) => {
                             let apis = api_service::get_all_apis();
+                            let new_selected_index = apis.iter().position(|api| api.id == *api_id);
                             let new_content = LeftContent::Apis(apis);
                             self.content = new_content;
-                            LeftInputResult::None
+
+                            self.select(new_selected_index.to_owned());
+                            self.changed_show()
+                        }
+                        LeftContent::Requests(_, resource_id) => {
+                            let parent_resource =
+                                resource_service::get_resource_by_id(*resource_id).unwrap();
+                            let resources =
+                                resource_service::get_resources_for_api(parent_resource.api_id);
+                            let new_selected_index = resources
+                                .iter()
+                                .position(|resource| resource.id == *resource_id);
+                            self.content =
+                                LeftContent::Resources(resources, parent_resource.api_id);
+
+                            self.select(new_selected_index.to_owned());
+                            self.changed_show()
                         }
                         _ => LeftInputResult::None,
                     }
@@ -256,7 +305,7 @@ impl<'a> LeftList {
                 let list = requests.iter().map(|request| {
                     ListItem::new(Spans::from(vec![
                         Span::styled(
-                            format!("{}", request.method),
+                            format!("{}    ", request.method),
                             Style::default()
                                 .fg(Color::Green)
                                 .add_modifier(Modifier::BOLD),

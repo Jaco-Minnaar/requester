@@ -9,13 +9,13 @@ use diesel::prelude::*;
 use diesel::sqlite::SqliteConnection;
 use interface::main_window::MainWindow;
 use lazy_static::lazy_static;
-use services::api_service;
 
 mod config;
 mod interface;
 mod models;
 mod schema;
 mod services;
+mod types;
 
 lazy_static! {
     static ref CONFIG: ReqstrConfig = {
