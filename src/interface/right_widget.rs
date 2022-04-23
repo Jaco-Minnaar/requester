@@ -7,15 +7,16 @@ use tui::{
     style::{Color, Modifier, Style},
     text::{Span, Spans},
     widgets::{
-        Block, BorderType, Borders, Cell, List, ListItem, Row, Table, TableState, Tabs, Widget, Paragraph
+        Block, BorderType, Borders, Cell, List, ListItem, Paragraph, Row, Table, TableState, Tabs,
+        Widget,
     },
 };
 
 use crate::{
+    http,
     models::{Api, Header, NewHeader, Request, Resource},
     services::{api_service, header_service, request_service, resource_service},
     types::HttpMethod,
-    http
 };
 
 use reqwest::blocking::Response;
@@ -122,7 +123,7 @@ struct RequestWidget {
     param_table_state: TableState,
     headers: Vec<Header>,
     input: Option<String>,
-    response: Option<String>
+    response: Option<String>,
 }
 
 impl RequestWidget {
@@ -135,7 +136,7 @@ impl RequestWidget {
             param_table_state: TableState::default(),
             headers,
             input: None,
-            response: None
+            response: None,
         }
     }
 
@@ -246,8 +247,9 @@ impl RequestWidget {
                             RightInputResult::None
                         }
                         'r' => {
-                            let response = http::make_request(self.request.id, "https://dummyjson.com");
-                            
+                            let response =
+                                http::make_request(self.request.id, "https://dummyjson.com");
+
                             self.response = Some(response.text().unwrap());
                             RightInputResult::None
                         }
@@ -353,14 +355,13 @@ impl RequestWidget {
             self.request.route.clone()
         };
 
-        let highlight_style = if self.input.is_some() { Style::default().bg(Color::Cyan).fg(Color::Black)} else { Style::default().fg(Color::Black).bg(Color::Yellow) };
+        let highlight_style = if self.input.is_some() {
+            Style::default().bg(Color::Cyan).fg(Color::Black)
+        } else {
+            Style::default().fg(Color::Black).bg(Color::Yellow)
+        };
 
-
-        let route_row = Row::new([
-            Cell::from("Route"),
-            Cell::from(route_value)
-        ])
-        .height(1);
+        let route_row = Row::new([Cell::from("Route"), Cell::from(route_value)]).height(1);
         let method_row = Row::new([
             Cell::from("Http Method"),
             Cell::from(self.request.method.to_string()),
@@ -394,7 +395,11 @@ impl Drawable for RequestWidget {
             .title("Request Details")
             .borders(Borders::ALL);
 
-        let first_title = Spans::from(vec![Span::styled("Request ", Style::default()), Span::styled("D", Style::default().add_modifier(Modifier::UNDERLINED)), Span::raw("etails")]);
+        let first_title = Spans::from(vec![
+            Span::styled("Request ", Style::default()),
+            Span::styled("D", Style::default().add_modifier(Modifier::UNDERLINED)),
+            Span::raw("etails"),
+        ]);
         let mut titles: Vec<Spans> = ["Headers", "Params", "Body"]
             .iter()
             .map(|t| {
@@ -454,9 +459,7 @@ impl Drawable for RequestWidget {
         if let Some(response) = &mut self.response {
             let response_para = Paragraph::new(response.as_str()).block(response_block);
             frame.render_widget(response_para, response_chunk);
-            
         }
-
     }
 }
 

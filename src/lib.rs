@@ -11,12 +11,12 @@ use interface::main_window::MainWindow;
 use lazy_static::lazy_static;
 
 mod config;
+mod http;
 mod interface;
 mod models;
 mod schema;
 mod services;
 mod types;
-mod http;
 
 lazy_static! {
     static ref CONFIG: ReqstrConfig = {
