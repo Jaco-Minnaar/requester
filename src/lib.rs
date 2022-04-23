@@ -16,6 +16,7 @@ mod models;
 mod schema;
 mod services;
 mod types;
+mod http;
 
 lazy_static! {
     static ref CONFIG: ReqstrConfig = {

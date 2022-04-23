@@ -123,6 +123,22 @@ impl<'a> LeftList {
             self.set_selected();
         }
     }
+    pub fn refresh(&mut self) {
+        match self.content {
+            LeftContent::Apis(_) => {
+                let apis = api_service::get_all_apis();
+                self.content = LeftContent::Apis(apis);
+            }
+            LeftContent::Resources(_, api_id) => {
+                let resources = resource_service::get_resources_for_api(api_id);
+                self.content = LeftContent::Resources(resources, api_id);
+            }
+            LeftContent::Requests(_, resource_id) => {
+                let requests = request_service::get_requests_for_resource(resource_id).unwrap();
+                self.content = LeftContent::Requests(requests, resource_id);
+            }
+        }
+    }
 
     fn changed_show(&self) -> LeftInputResult {
         if let Some(selected_index) = self.selected_item {

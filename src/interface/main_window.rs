@@ -1,5 +1,5 @@
 use super::left_widget::{LeftInputResult, LeftList};
-use super::right_widget::{RightType, RightWidget};
+use super::right_widget::{RightInputResult, RightType, RightWidget};
 use crossterm::event::{self, Event as CEvent, KeyCode};
 use crossterm::terminal::{disable_raw_mode, enable_raw_mode};
 use std::io::{self, Stdout};
@@ -121,6 +121,11 @@ impl<'a> MainWindow {
                         self.set_right(result);
                         false
                     }
+                    LeftInputResult::EditRequest(request_id) => {
+                        self.right.set_type(RightType::Request(request_id));
+                        self.focus = Focus::Right;
+                        false
+                    }
                     LeftInputResult::Exit => {
                         disable_raw_mode().unwrap();
                         self.terminal.show_cursor().unwrap();
@@ -129,7 +134,25 @@ impl<'a> MainWindow {
                     _ => false,
                 }
             }
-            _ => false,
+            Focus::Right => {
+                let result = self.right.handle_input(key_code);
+                match result {
+                    RightInputResult::Exit => {
+                        disable_raw_mode().unwrap();
+                        self.terminal.show_cursor().unwrap();
+                        true
+                    }
+                    RightInputResult::LoseFocus => {
+                        self.focus = Focus::Left;
+                        false
+                    }
+                    RightInputResult::RefreshRequests => {
+                        self.left.refresh();
+                        false
+                    }
+                    _ => false,
+                }
+            }
         }
     }
 
